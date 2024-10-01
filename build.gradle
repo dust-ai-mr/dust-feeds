@@ -1,0 +1,95 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group 'com.mentalresonance'
+version '1.0.2'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    compileOnly 'org.slf4j:slf4j-simple:2.0.7'
+    compileOnly 'org.apache.groovy:groovy-all:4.0.12'
+
+    testImplementation platform("org.spockframework:spock-bom:2.4-M1-groovy-4.0")
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.projectlombok:lombok:1.18.22'
+    testImplementation 'org.slf4j:slf4j-simple:2.0.7'
+    testImplementation("org.postgresql:postgresql:42.6.0")
+    testImplementation 'org.apache.groovy:groovy-all:4.0.12'
+    testImplementation('com.mentalresonance:dust-core:1.0.2')
+    testImplementation('com.mentalresonance:dust-http:1.0.2')
+    testImplementation('com.mentalresonance:dust-html:1.0.2')
+
+    api('com.rometools:rome:2.1.0')
+    api 'commons-io:commons-io:2.13.0'
+
+
+    api('com.mentalresonance:dust-core:1.0.2')
+    api('com.mentalresonance:dust-http:1.0.2')
+    api('com.mentalresonance:dust-html:1.0.2')
+
+    implementation group: 'com.github.crawler-commons', name: 'crawler-commons', version: '1.4'
+
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs([
+        '-Xmx8g',
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.math=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+        '--add-opens=java.base/java.util.concurrent=ALL-UNNAMED',
+        '--add-opens=java.base/java.net=ALL-UNNAMED',
+        '--add-opens=java.base/java.text=ALL-UNNAMED',
+        '--add-opens=java.sql/java.sql=ALL-UNNAMED'
+    ])
+
+}
+
+javadoc.options {
+    addStringOption('-release', '21')
+}
+
+tasks.withType(JavaCompile).each {
+    // it.options.compilerArgs.add('-Xlint:preview')
+}
+
+java {
+    withSourcesJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+compileGroovy {
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+/** Use this if calling Groovy from Java
+ *
+
+sourceSets {
+    main {
+        java { srcDirs = [] }    // no source dirs for the java compiler
+        groovy { srcDirs = ["src/main/java", "src/main/groovy"] }  // compile   everything in src/ with groovy
+    }
+}
+
+ */
