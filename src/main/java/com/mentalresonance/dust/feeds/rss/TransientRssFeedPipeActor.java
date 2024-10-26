@@ -18,14 +18,15 @@
 package com.mentalresonance.dust.feeds.rss;
 
 import com.mentalresonance.dust.core.actors.*;
+import com.mentalresonance.dust.core.msgs.PauseMsg;
+import com.mentalresonance.dust.core.msgs.SnapshotMsg;
+import com.mentalresonance.dust.core.msgs.StartMsg;
 import com.mentalresonance.dust.feeds.msgs.RawDocumentMsg;
 import com.mentalresonance.dust.feeds.msgs.UpdateUrlMsg;
 import com.mentalresonance.dust.html.msgs.HtmlDocumentMsg;
 import com.mentalresonance.dust.http.service.HttpRequestResponseMsg;
 import com.mentalresonance.dust.http.service.HttpService;
 import com.mentalresonance.dust.http.trait.HttpClientActor;
-import com.mentalresonance.dust.core.msgs.SnapshotMsg;
-import com.mentalresonance.dust.core.msgs.StartMsg;
 import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
@@ -35,21 +36,22 @@ import com.rometools.rome.io.XmlReader;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Response;
+
 import java.io.Serializable;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
-import com.mentalresonance.dust.core.msgs.PauseMsg;
 
 
 /**
  * Periodically visit RSS feed given by URL and access recent documents. Produces HtmlDocumentMsgs or RssContentMsgs
- * (depending on Props) which it sends to its parent pipeline.
+ * (depending on Props) which it sends to its parent pipeline. Is not persistent so does not know where it was
+ * on restart (unlike {@link  RssFeedPipeActor}
  *
  * <b>Needs to receive a StartMsg to start.</b>
  */
 @Slf4j
-public class RssFeedPipeActor extends PersistentActor implements HttpClientActor {
+public class TransientRssFeedPipeActor extends Actor implements HttpClientActor {
 
     /**
      * Throttler
@@ -73,9 +75,9 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
     protected Cancellable pump = null;
 
     /**
-     * Persistent state
+     * Non-persistent state
      */
-    protected RssFeedstate rssFeedstate;
+    protected RssFeedstate rssFeedstate = new RssFeedstate();
 
     /**
      * By default we return the content indicated by teh feed (i.e. we retrieve the content
@@ -107,17 +109,17 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
      * @return Props
      */
     public static Props props(String url, Long interval) {
-        return Props.create(RssFeedPipeActor.class, url, interval, null, true);
+        return Props.create(TransientRssFeedPipeActor.class, url, interval, null, true);
     }
 
     public static Props props(String url, Long interval, boolean returnContent) {
-        return Props.create(RssFeedPipeActor.class, url, interval, null, returnContent);
+        return Props.create(TransientRssFeedPipeActor.class, url, interval, null, returnContent);
     }
     public static Props props(String url, Long intervalMS, ActorRef throttler) {
-        return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, true);
+        return Props.create(TransientRssFeedPipeActor.class, url, intervalMS, throttler, true);
     }
     public static Props props(String url, Long intervalMS, ActorRef throttler, Boolean returnContent) {
-        return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, returnContent);
+        return Props.create(TransientRssFeedPipeActor.class, url, intervalMS, throttler, returnContent);
     }
     /**
      * Contructor
@@ -125,7 +127,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
      * @param intervalMS (in ms) between visits
      * @param throttler nullable throttler
      */
-    public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, Boolean returnContent) {
+    public TransientRssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, Boolean returnContent) {
         this.url = url;
         this.throttler = throttler;
         this.intervalMS = intervalMS;
@@ -139,7 +141,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
      * @param userAgent to use in http calls
      * @param returnContent if true generate messages from referenced links else return Link and Meta INfo
      */
-    public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, String userAgent, Boolean returnContent) {
+    public TransientRssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, String userAgent, Boolean returnContent) {
         this.url = url;
         this.throttler = throttler;
         this.intervalMS = intervalMS;
@@ -149,37 +151,13 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
 
     }
 
-    @Override
-    protected void preStart() {
-        saveSnapshot(rssFeedstate);
-    }
-
     /**
      * If I am stopped then I will delete my data - otherwise save it.
      */
     @Override
     protected void postStop() {
-        if (isInShutdown()) {
-            saveSnapshot(rssFeedstate);
-        } else
-            deleteSnapshot();
         if (null != pump)
             pump.cancel();
-    }
-
-    @Override
-    protected ActorBehavior recoveryBehavior() {
-        return message -> {
-            switch(message) {
-                case SnapshotMsg msg -> {
-                    rssFeedstate = null != msg.getSnapshot() ? (RssFeedstate) msg.getSnapshot() : new RssFeedstate();
-                    become(createBehavior());
-                }
-                default  -> {
-                    log.error("%s received unhandled message %s in recovery".formatted(self.path, message));
-                }
-            }
-        };
     }
 
     @Override
@@ -326,7 +304,6 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
 
         if (latestPublished[0] > 0) {
             rssFeedstate.lastTs = latestPublished[0];
-            saveSnapshot(rssFeedstate);
         }
         log.info("Processing %d new entries from RSS feed %s".formatted(entries.size(), url));
 
