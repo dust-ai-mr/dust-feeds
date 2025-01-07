@@ -1,5 +1,5 @@
 /*
- *   Copyright 2024 Alan Littleford
+ *   Copyright 2024-2025 Alan Littleford
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package com.mentalresonance.dust.feeds.rss;
 
 import com.mentalresonance.dust.core.actors.*;
 import com.mentalresonance.dust.core.msgs.PauseMsg;
-import com.mentalresonance.dust.core.msgs.SnapshotMsg;
 import com.mentalresonance.dust.core.msgs.StartMsg;
 import com.mentalresonance.dust.feeds.msgs.RawDocumentMsg;
 import com.mentalresonance.dust.feeds.msgs.UpdateUrlMsg;

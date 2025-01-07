@@ -1,5 +1,5 @@
 /*
- *   Copyright 2024 Alan Littleford
+ *   Copyright 2024-2025 Alan Littleford
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -60,6 +60,6 @@ public class RssPubSubActor extends PubSubActor {
 
     @Override
     protected void preStart() throws ActorInstantiationException {
-        actorOf(RssFeedPipeActor.props(url, intervalMS), "rss-feed").tell(new StartMsg(), self);
+        actorOf(RssFeedPipeActor.props(url, intervalMS, throttler, returnContent), "rss-feed").tell(new StartMsg(), self);
     }
 }

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2024 Alan Littleford
+ *   Copyright 2024-2025 Alan Littleford
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -120,10 +120,12 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
         return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, returnContent);
     }
     /**
-     * Contructor
+     * Constructor
      * @param url of feed
      * @param intervalMS (in ms) between visits
      * @param throttler nullable throttler
+     * @param returnContent if false send parent an {@link RssContentMsg} which describes the linked content, else GET the linked
+     *                      content and send parent an {@link HtmlDocumentMsg}
      */
     public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, Boolean returnContent) {
         this.url = url;
@@ -137,7 +139,8 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
      * @param intervalMS (in ms) between visits
      * @param throttler nullable throttler
      * @param userAgent to use in http calls
-     * @param returnContent if true generate messages from referenced links else return Link and Meta INfo
+     * @param returnContent if false send parent an {@link RssContentMsg} which describes the linked content, else GET the linked
+     *                      content and send parent an {@link HtmlDocumentMsg}
      */
     public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, String userAgent, Boolean returnContent) {
         this.url = url;

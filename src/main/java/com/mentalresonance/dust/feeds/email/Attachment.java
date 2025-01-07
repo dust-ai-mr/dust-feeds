@@ -15,28 +15,22 @@
  *
  */
 
-package com.mentalresonance.dust.feeds.crawler;
+package com.mentalresonance.dust.feeds.email;
+
 
 import lombok.Getter;
 
 import java.io.Serializable;
-import java.util.List;
 
-
-/**
- * Page Crawler -> SiteCrawler contents of crawled page
- */
 @Getter
-class PageMsg implements Serializable {
-	String url;
-	String content;
-	String type;
-	List<List<String>> links;
+public class Attachment implements Serializable {
+    String filename;
+    String contentType;
+    byte[] content;
 
-	public PageMsg(String url, String content, String type, List<List<String>> links) {
-		this.url = url;
-		this.content = content;
-		this.type = type;
-		this.links = links;
-	}
+    Attachment(String filename, String contentType, byte[] content) {
+        this.filename = filename;
+        this.contentType = contentType;
+        this.content = content;
+    }
 }
