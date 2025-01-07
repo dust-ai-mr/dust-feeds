@@ -95,7 +95,7 @@ public class ImapActor extends Actor {
 								String filename = mimeBodyPart.getFileName();
 								log.info("Attachment: %s".formatted(filename));
 								byte[] bytes = mimeBodyPart.getInputStream().readAllBytes();
-								mailmsg.addAttachment(new MailMsg.Attachment(filename, mimeBodyPart.getContentType(), bytes));
+								mailmsg.addAttachment(new Attachment(filename, mimeBodyPart.getContentType(), bytes));
 							} else {
 								mailmsg.setContentType(mimeBodyPart.getContentType());
 								mailmsg.setContent(mimeBodyPart.getContent().toString());

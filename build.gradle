@@ -26,7 +26,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-all:4.0.12'
     testImplementation('com.mentalresonance:dust-core:1.1.2')
     testImplementation('com.mentalresonance:dust-http:1.0.4')
-    testImplementation('com.mentalresonance:dust-html:1.0.5')
+    testImplementation('com.mentalresonance:dust-html:1.0.4')
 
     api('com.rometools:rome:2.1.0')
     api 'commons-io:commons-io:2.13.0'

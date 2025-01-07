@@ -21,12 +21,8 @@ import com.mentalresonance.dust.core.actors.ActorBehavior
 import com.mentalresonance.dust.core.actors.ActorRef
 import com.mentalresonance.dust.core.actors.ActorSystem
 import com.mentalresonance.dust.core.actors.Props
-import com.mentalresonance.dust.core.actors.lib.LogActor
-import com.mentalresonance.dust.core.actors.lib.PipelineActor
 import com.mentalresonance.dust.core.msgs.PubSubMsg
-import com.mentalresonance.dust.core.msgs.StartMsg
 import com.mentalresonance.dust.core.services.FSTPersistenceService
-import com.mentalresonance.dust.feeds.rss.RssFeedPipeActor
 import com.mentalresonance.dust.feeds.rss.RssPubSubActor
 import com.mentalresonance.dust.html.msgs.HtmlDocumentMsg
 import groovy.util.logging.Slf4j
