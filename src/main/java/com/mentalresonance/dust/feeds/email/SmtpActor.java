@@ -90,7 +90,6 @@ public class SmtpActor extends Actor {
 
 			// Send message
 			Transport.send(message);
-			System.out.println("Sent message successfully....");
 		} catch (MessagingException mex) {
 			mex.printStackTrace();
 		}

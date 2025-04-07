@@ -100,6 +100,9 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
         public RssFeedstate() {}
     }
 
+    @Override
+    protected Class<RssFeedstate> getSnapshotClass() { return RssFeedstate.class; }
+
     /**
      * Props
      * @param url of feed
@@ -216,7 +219,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                                 HttpService.buildGetRequest(msg.link, headers)
                         );
                         pcm.rcm = msg;
-
+                        log.trace("Getting page at {}", pcm.request.url());
                         if (null != throttler)
                             throttler.tell(pcm, self);
                         else
@@ -231,6 +234,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                     else { // Response
                         if (null != pcm.response) {
                             try {
+                                log.trace("Got page at {}", pcm.request.url());
                                 String contentType = pcm.response.header("content-type");
                                 if (null == contentType) contentType = "text/html";
                                 if (contentType.contains("html")) {
