@@ -92,8 +92,7 @@ public class ImapActor extends Actor {
 			inbox.open(Folder.READ_WRITE);
 
 			Message[] messages = inbox.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
-			if (messages.length > 0)
-				log.info("Number of unread messages: {}", messages.length);
+			log.info("Number of unread messages: {}", messages.length);
 
 			// Just reading the first message as an example
 			for (Message message : messages) {
