@@ -92,7 +92,7 @@ public class ImapActor extends Actor {
 			inbox.open(Folder.READ_WRITE);
 
 			Message[] messages = inbox.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
-			log.info("Number of unread messages: {}", messages.length);
+			log.trace("Number of unread messages: {}", messages.length);
 
 			// Just reading the first message as an example
 			for (Message message : messages) {
@@ -109,7 +109,7 @@ public class ImapActor extends Actor {
 							MimeBodyPart mimeBodyPart = (MimeBodyPart) bodyPart;
 							if (Part.ATTACHMENT.equalsIgnoreCase(mimeBodyPart.getDisposition())) {
 								String filename = mimeBodyPart.getFileName();
-								log.info("Attachment: %s".formatted(filename));
+								log.trace("Attachment: %s".formatted(filename));
 								byte[] bytes = mimeBodyPart.getInputStream().readAllBytes();
 								mailmsg.addAttachment(new Attachment(filename, mimeBodyPart.getContentType(), bytes));
 							} else {

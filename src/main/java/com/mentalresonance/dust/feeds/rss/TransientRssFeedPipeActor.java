@@ -26,6 +26,7 @@ import com.mentalresonance.dust.html.msgs.HtmlDocumentMsg;
 import com.mentalresonance.dust.http.service.HttpRequestResponseMsg;
 import com.mentalresonance.dust.http.service.HttpService;
 import com.mentalresonance.dust.http.trait.HttpClientActor;
+import com.rometools.rome.feed.WireFeed;
 import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
@@ -291,6 +292,16 @@ public class TransientRssFeedPipeActor extends Actor implements HttpClientActor 
                      * Filter by more recent than we last saw and then adjust that time at the end.
                      */
                     Date published = null != entry.getPublishedDate() ? entry.getPublishedDate() : feed.getPublishedDate();
+                    // rome only gets dublin code date so we have to try harder
+                    if (published == null) {
+                        WireFeed wireFeed = feed.originalWireFeed();
+                        if (wireFeed instanceof com.rometools.rome.feed.rss.Channel) {
+                            com.rometools.rome.feed.rss.Channel rssChannel = (com.rometools.rome.feed.rss.Channel) wireFeed;
+                            published = (null != rssChannel.getPubDate()) ? rssChannel.getPubDate() : rssChannel.getLastBuildDate();
+                        } else {
+                            System.out.println("Feed is not RSS");
+                        }
+                    }
                     if (null != published && published.getTime() > rssFeedstate.lastTs) {
                         if (published.getTime() > latestPublished[0]) latestPublished[0] = published.getTime();
                         // Ensure we have some published date
