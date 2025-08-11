@@ -26,7 +26,6 @@ import com.mentalresonance.dust.http.service.HttpService;
 import com.mentalresonance.dust.http.trait.HttpClientActor;
 import com.mentalresonance.dust.core.msgs.SnapshotMsg;
 import com.mentalresonance.dust.core.msgs.StartMsg;
-import com.rometools.rome.feed.WireFeed;
 import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
@@ -36,11 +35,23 @@ import com.rometools.rome.io.XmlReader;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Response;
+import java.io.ByteArrayInputStream;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import com.mentalresonance.dust.core.msgs.PauseMsg;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 
 /**
@@ -297,9 +308,13 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
     protected void processRSS(Response response)
     {
         SyndFeed feed;
+        String body;
 
         try {
-            feed = new SyndFeedInput().build(new XmlReader(response.body().byteStream()));
+            body = response.body().string();
+            feed = new SyndFeedInput().build(
+                    new XmlReader(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)))
+            );
         }
         catch (Exception e) {
             log.error("Processing RSS for %s: %s".formatted(url, e.getMessage()));
@@ -325,13 +340,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                     Date published = null != entry.getPublishedDate() ? entry.getPublishedDate() : feed.getPublishedDate();
                     // rome only gets dublin code date so we have to try harder
                     if (published == null) {
-                        WireFeed wireFeed = feed.originalWireFeed();
-                        if (wireFeed instanceof com.rometools.rome.feed.rss.Channel) {
-                            com.rometools.rome.feed.rss.Channel rssChannel = (com.rometools.rome.feed.rss.Channel) wireFeed;
-                            published = (null != rssChannel.getPubDate()) ? rssChannel.getPubDate() : rssChannel.getLastBuildDate();
-                        } else {
-                            System.out.println("Feed is not RSS");
-                        }
+                        published = pubDate(body, entry.getLink());
                     }
                     if (null != published && published.getTime() > rssFeedstate.lastTs) {
                         if (published.getTime() > latestPublished[0]) latestPublished[0] = published.getTime();
@@ -397,6 +406,75 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                     self.tell(rssContentMsg, self);
                 }
             }
+        }
+    }
+
+    private Date pubDate(String feed, String entryUrl) {
+        Date date = null;
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(feed.getBytes(StandardCharsets.UTF_8)));
+
+            // Normalize XML structure
+            doc.getDocumentElement().normalize();
+
+            Element channel = (Element) doc.getElementsByTagName("channel").item(0);
+
+            String pubDateStr = getTextContent(channel, "pubDate");
+            String lastBuildDateStr = getTextContent(channel, "lastBuildDate");
+
+            SimpleDateFormat rfc822 = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", java.util.Locale.US);
+
+            Date pubDate = pubDateStr != null ? rfc822.parse(pubDateStr) : null;
+            Date lastBuildDate = lastBuildDateStr != null ? rfc822.parse(lastBuildDateStr) : null;
+
+            date = lastBuildDate != null ? lastBuildDate : pubDate;
+            if (date == null)
+                date = extractDateFromUrl(entryUrl);
+        }
+        catch (Exception e) {
+            log.error("Could not parse RSS feed %s".formatted(feed));
+        }
+        return date;
+    }
+
+    private static String getTextContent(Element parent, String tagName) {
+        NodeList nodes = parent.getElementsByTagName(tagName);
+        if (nodes.getLength() > 0) {
+            return nodes.item(0).getTextContent();
+        }
+        return null;
+    }
+
+    private static final List<DatePattern> datePatterns = List.of(
+            new DatePattern("\\b(\\d{4})(\\d{2})(\\d{2})\\b", "yyyyMMdd"),
+            new DatePattern("\\b(\\d{4})[-/](\\d{2})[-/](\\d{2})\\b", "yyyy-MM-dd"),
+            new DatePattern("\\b(\\d{2})[-/](\\d{2})[-/](\\d{4})\\b", "dd-MM-yyyy")
+    );
+
+    private static Date extractDateFromUrl(String url) {
+        for (DatePattern pattern : datePatterns) {
+            Matcher matcher = pattern.regex.matcher(url);
+            if (matcher.find()) {
+                String rawDate = matcher.group(0);
+                try {
+                    return pattern.format.parse(rawDate);
+                } catch (ParseException ignored) {
+                }
+            }
+        }
+        return null; // No known pattern matched
+    }
+
+    private static class DatePattern {
+        Pattern regex;
+        SimpleDateFormat format;
+
+        DatePattern(String regex, String format) {
+            this.regex = Pattern.compile(regex);
+            this.format = new SimpleDateFormat(format);
+            this.format.setLenient(false);
         }
     }
 }
