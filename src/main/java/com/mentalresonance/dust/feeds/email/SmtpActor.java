@@ -80,7 +80,13 @@ public class SmtpActor extends Actor {
 			message.setFrom(new InternetAddress(userName));
 
 			// Add the given addresses to the specified recipient type
-			message.addRecipient(Message.RecipientType.TO, msg.sender[0]);
+			message.addRecipient(Message.RecipientType.TO, msg.recipients[0]);
+
+			if (msg.recipients.length > 1) {
+				for (int i = 1; i < msg.recipients.length; i++) {
+					message.addRecipient(Message.RecipientType.BCC, msg.recipients[i]);
+				}
+			}
 
 			// Set the "Subject" header field
 			message.setSubject(msg.subject);

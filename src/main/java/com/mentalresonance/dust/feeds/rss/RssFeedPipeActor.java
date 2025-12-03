@@ -276,6 +276,9 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                     } else
                         log.error("RSS call to %s failed - %d".formatted(url, msg.response.code()));
                 }
+
+                case SerializableFeed msg -> processRss(msg.toSyndFeed());
+
                 default -> {
                     super.createBehavior().onMessage(message);
                 }
@@ -301,27 +304,40 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
     }
 
     /**
-     * Process the XML from the feed
+     * Process the XML from the feed with response
      * @param response - contains XML with feed content
      */
-    protected void processRSS(Response response)
-    {
-        SyndFeed feed;
+    protected void processRSS(Response response) {
         String body;
 
         try {
             body = response.body().string();
-            feed = new SyndFeedInput().build(
-                    new XmlReader(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)))
+            processRss(new SyndFeedInput().build(
+                new XmlReader(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)))),
+                body
             );
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Processing RSS for %s: %s".formatted(url, e.getMessage()));
             return;
-        }
-        finally {
+        } finally {
             response.close();
         }
+    }
+
+    /**
+     * Process RSS from the explicitly supplied SyndFeed - i.e. a RSS proxy
+     * @param feed
+     */
+    protected void processRss(SyndFeed feed) {
+        processRss(feed, null);
+    }
+
+    /**
+     * Common
+     * @param feed
+     * @param body
+     */
+    protected void processRss(SyndFeed feed, String body) {
 
         final Long[] latestPublished = {0L};
 
@@ -338,7 +354,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                      */
                     Date published = null != entry.getPublishedDate() ? entry.getPublishedDate() : feed.getPublishedDate();
                     // rome only gets dublin code date so we have to try harder
-                    if (published == null) {
+                    if (published == null && body != null) {
                         published = pubDate(body, entry.getLink());
                     }
                     if (null != published && published.getTime() > rssFeedstate.lastTs) {
@@ -433,7 +449,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                 date = extractDateFromUrl(entryUrl);
         }
         catch (Exception e) {
-            log.error("Could not parse RSS feed %s".formatted(feed));
+            log.error("Could not get pub date for entry:{}  exception: {}", entryUrl, e.getMessage());
         }
         return date;
     }

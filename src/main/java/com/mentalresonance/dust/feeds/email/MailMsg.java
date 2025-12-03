@@ -34,22 +34,22 @@ public class MailMsg implements Serializable {
 	@Setter
 	String content = null, contentType = null, subject;
 
-	Address[] sender;
+	Address[] recipients;  // [0] is 'to', rest are BCC
 
 	List<Attachment> attachments = new LinkedList<>();
 
 	@Setter
 	Serializable data; // Convenience
 
-	public MailMsg(String subject, String content, Address[] sender) {
+	public MailMsg(String subject, String content, Address[] recipients) {
 		this.subject = subject;
 		this.content = content;
-		this.sender = sender;
+		this.recipients = recipients;
 	}
 
-	public MailMsg(String subject, Address[] sender) {
+	public MailMsg(String subject, Address[] recipients) {
 		this.subject = subject;
-		this.sender = sender;
+		this.recipients = recipients;
 	}
 
 	public void addAttachment(Attachment attachment) {
@@ -58,6 +58,6 @@ public class MailMsg implements Serializable {
 
 	@Override
 	public String toString() {
-		return "from:%s subject: %s\ncontent:%s".formatted(sender[0].toString(), subject ,content);
+		return "from:%s subject: %s\ncontent:%s".formatted(recipients[0].toString(), subject ,content);
 	}
 }
