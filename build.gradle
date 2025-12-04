@@ -25,7 +25,7 @@ dependencies {
     testImplementation("org.postgresql:postgresql:42.6.0")
     testImplementation 'org.apache.groovy:groovy-all:4.0.12'
     testImplementation('com.mentalresonance:dust-core:1.1.5')
-    testImplementation('com.mentalresonance:dust-http:1.1.5')
+    testImplementation('com.mentalresonance:dust-http:1.1.6')
     testImplementation('com.mentalresonance:dust-html:1.1.5')
 
     api('com.rometools:rome:2.1.0')
@@ -33,7 +33,7 @@ dependencies {
 
 
     implementation('com.mentalresonance:dust-core:1.1.5')
-    implementation('com.mentalresonance:dust-http:1.1.5')
+    implementation('com.mentalresonance:dust-http:1.1.6')
     implementation('com.mentalresonance:dust-html:1.1.5')
 
     api 'jakarta.mail:jakarta.mail-api:2.1.3'
