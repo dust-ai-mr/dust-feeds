@@ -145,6 +145,7 @@ public class SiteCrawlerPipeActor extends Actor implements HttpClientActor {
 									StandardCharsets.UTF_8.name(),
 									List.of()
 							);
+							robotsResponse.close();
 							haveCheckedRobots = true;
 						}
 					}

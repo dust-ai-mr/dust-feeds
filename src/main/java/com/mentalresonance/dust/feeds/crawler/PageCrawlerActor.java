@@ -108,6 +108,7 @@ public class PageCrawlerActor extends Actor implements HttpClientActor {
 							log.warn("Request to {} failed", url);
 							stopSelf();
 						}
+						rrm.response.close();
 					}
 					else {
 						log.error("No response from {} .. stopping", url);

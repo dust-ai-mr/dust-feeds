@@ -89,6 +89,11 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
     protected RssFeedstate rssFeedstate;
 
     /**
+     * If tried to get RSS content and we haven't recognized it as valid RSS this many times then stop
+     */
+    protected int maxErrors;
+
+    /**
      * By default we return the content indicated by teh feed (i.e. we retrieve the content
      * of the RSS links). Otherwise we will return an RssContentMsg which has meta info and the link
      * and possibly a summary
@@ -121,17 +126,20 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
      * @return Props
      */
     public static Props props(String url, Long interval) {
-        return Props.create(RssFeedPipeActor.class, url, interval, null, true);
+        return Props.create(RssFeedPipeActor.class, url, interval, null, true, 3);
     }
 
     public static Props props(String url, Long interval, boolean returnContent) {
-        return Props.create(RssFeedPipeActor.class, url, interval, null, returnContent);
+        return Props.create(RssFeedPipeActor.class, url, interval, null, returnContent, 3);
     }
     public static Props props(String url, Long intervalMS, ActorRef throttler) {
-        return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, true);
+        return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, true, 3);
     }
     public static Props props(String url, Long intervalMS, ActorRef throttler, Boolean returnContent) {
-        return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, returnContent);
+        return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, returnContent, 3);
+    }
+    public static Props props(String url, Long intervalMS, ActorRef throttler, Boolean returnContent, int maxErrors) {
+        return Props.create(RssFeedPipeActor.class, url, intervalMS, throttler, returnContent, maxErrors);
     }
     /**
      * Constructor
@@ -141,11 +149,12 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
      * @param returnContent if false send parent an {@link RssContentMsg} which describes the linked content, else GET the linked
      *                      content and send parent an {@link HtmlDocumentMsg}
      */
-    public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, Boolean returnContent) {
+    public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, Boolean returnContent, int maxErrors) {
         this.url = url;
         this.throttler = throttler;
         this.intervalMS = intervalMS;
         this.returnContent = returnContent == null || returnContent;
+        this.maxErrors = maxErrors;
     }
     /**
      * Contructor
@@ -156,11 +165,12 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
      * @param returnContent if false send parent an {@link RssContentMsg} which describes the linked content, else GET the linked
      *                      content and send parent an {@link HtmlDocumentMsg}
      */
-    public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, String userAgent, Boolean returnContent) {
+    public RssFeedPipeActor(String url, Long intervalMS, ActorRef throttler, String userAgent, Boolean returnContent, int maxErrors) {
         this.url = url;
         this.throttler = throttler;
         this.intervalMS = intervalMS;
         this.returnContent = returnContent == null || returnContent;
+        this.maxErrors = maxErrors;
         headers = new LinkedHashMap<>();
         headers.put("User-Agent", userAgent);
 
@@ -275,6 +285,8 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                         log.error("RSS call to %s failed - %s".formatted(url, msg.exception.getMessage()));
                     } else
                         log.error("RSS call to %s failed - %d".formatted(url, msg.response.code()));
+                    if (null != msg.response)
+                        msg.response.close();
                 }
 
                 case SerializableFeed msg -> processRss(msg.toSyndFeed());
@@ -316,10 +328,16 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                 new XmlReader(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)))),
                 body
             );
-        } catch (Exception e) {
-            log.error("Processing RSS for %s: %s".formatted(url, e.getMessage()));
-            return;
-        } finally {
+        }
+        catch (Exception e) {
+            --maxErrors;
+            log.error("Processing RSS for {}: {}. {} attempts remain", url, e.getMessage(), maxErrors);
+            if (0 == maxErrors) {
+                log.warn("Stopping RSS feed for {}.", url);
+                stopSelf();
+            }
+        }
+        finally {
             response.close();
         }
     }
@@ -450,6 +468,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
         }
         catch (Exception e) {
             log.error("Could not get pub date for entry:{}  exception: {}", entryUrl, e.getMessage());
+            date = new Date(); // Todo: right choice ??
         }
         return date;
     }

@@ -63,6 +63,7 @@ public class PageContentMsg extends HttpRequestResponseMsg {
         doc.setTitle(rcm.title);
         doc.setSource(rcm.link);
         doc.setCreatedTs(System.currentTimeMillis());
+        response.close();
         return doc;
     }
 
@@ -79,13 +80,13 @@ public class PageContentMsg extends HttpRequestResponseMsg {
         assert response.body() != null;
 
         doc.setRawContent(response.body().bytes());
-
         doc.setContentTs(rcm.published.getTime());
         doc.setAuthor(rcm.author);
         doc.setTitle(rcm.title);
         doc.setSource(rcm.link);
         doc.setType(contentType);
         doc.setCreatedTs(System.currentTimeMillis());
+        response.close();
         return doc;
     }
 }

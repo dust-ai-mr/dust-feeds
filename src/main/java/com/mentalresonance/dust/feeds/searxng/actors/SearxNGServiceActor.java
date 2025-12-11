@@ -67,6 +67,7 @@ public class SearxNGServiceActor extends Actor implements HttpClientActor
                 }
                 case HttpRequestResponseMsg msg -> {
                     SearxNGResponseMsg resp = new Gson().fromJson(msg.response.body().string(), SearxNGResponseMsg.class);
+                    msg.response.close();
                     if (null != from) from.tell(resp, self);
                     stopSelf();
                 }
