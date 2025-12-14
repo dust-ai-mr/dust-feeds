@@ -18,6 +18,7 @@
 package com.mentalresonance.dust.feeds.rss;
 
 import com.mentalresonance.dust.core.actors.*;
+import com.mentalresonance.dust.core.msgs.ProxyMsg;
 import com.mentalresonance.dust.feeds.msgs.RawDocumentMsg;
 import com.mentalresonance.dust.feeds.msgs.UpdateUrlMsg;
 import com.mentalresonance.dust.html.msgs.HtmlDocumentMsg;
@@ -32,6 +33,7 @@ import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.feed.synd.SyndLink;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Response;
@@ -43,6 +45,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.mentalresonance.dust.core.msgs.PauseMsg;
@@ -183,13 +186,16 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
 
     /**
      * If I am stopped then I will delete my data - otherwise save it.
+     * Note we are stopping and threads may get interrupted so run on new vThread
+     * to prevent IO errors
      */
     @Override
     protected void postStop() {
         if (isInShutdown()) {
-            saveSnapshot(rssFeedstate);
-        } else
-            deleteSnapshot();
+            vStart(() -> saveSnapshot(rssFeedstate));
+        }
+        else
+            vStart(this::deleteSnapshot);
         if (null != pump)
             pump.cancel();
     }
@@ -197,14 +203,12 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
     @Override
     protected ActorBehavior recoveryBehavior() {
         return message -> {
-            switch(message) {
-                case SnapshotMsg msg -> {
-                    rssFeedstate = null != msg.getSnapshot() ? (RssFeedstate) msg.getSnapshot() : new RssFeedstate();
-                    become(createBehavior());
-                }
-                default  -> {
-                    log.error("%s received unhandled message %s in recovery".formatted(self.path, message));
-                }
+            if (Objects.requireNonNull(message) instanceof SnapshotMsg msg) {
+                rssFeedstate = null != msg.getSnapshot() ? (RssFeedstate) msg.getSnapshot() : new RssFeedstate();
+                become(createBehavior());
+            }
+            else {
+                log.error("%s received unhandled message %s in recovery".formatted(self.path, message));
             }
         };
     }
@@ -214,11 +218,24 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
         return message -> {
             switch(message) {
                 case StartMsg start -> {
-                    if (null == headers)
-                        request(url);
+                    /*
+                      Always go through throttler even for RSS page since we might have independent
+                      feeds going to the same site
+                     */
+                    URL wrapperUrl = new URL(self, url);
+                    log.trace("Got start on url {}. Throttler {}", url, throttler);
+                    if (null == throttler)
+                        tellSelf(wrapperUrl);
                     else
-                        request(url, headers);
-                    pump = scheduleIn(start, intervalMS);
+                        throttler.tell(wrapperUrl, self);
+                }
+                case URL wrapperUrl -> {
+                    log.trace("Got wrapperUrl on url {} Throttler {}", url, throttler);
+                    if (null == headers)
+                        request(wrapperUrl.getUrl());
+                    else
+                        request(wrapperUrl.getUrl(), headers);
+                    pump = scheduleIn(new StartMsg(), intervalMS);
                 }
                 case PauseMsg ignored -> {
                     if (null != pump)
@@ -499,6 +516,19 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
             }
         }
         return null; // No known pattern matched
+    }
+
+    /**
+     * Wrap RSS url so we can throttle it
+     */
+    private static class URL extends ProxyMsg {
+        @Getter
+        String url;
+
+        public URL(ActorRef sender, String url) {
+            super(sender);
+            this.url = url;
+        }
     }
 
     private static class DatePattern {
