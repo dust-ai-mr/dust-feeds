@@ -298,10 +298,13 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
                 case HttpRequestResponseMsg msg -> {
                     if (null != msg.response && msg.response.isSuccessful()) {
                         processRSS(msg.response);
+                        maxErrors = 3;  // Reset so we don't accumulate
+                    } else if (null == msg.response) {
+                        handleError(new Exception("No response"));
                     } else if (null != msg.exception) {
-                        log.error("RSS call to %s failed - %s".formatted(url, msg.exception.getMessage()));
+                        handleError(msg.exception);
                     } else
-                        log.error("RSS call to %s failed - %d".formatted(url, msg.response.code()));
+                        handleError(new Exception("Code: %d".formatted(msg.response.code())));
                     if (null != msg.response)
                         msg.response.close();
                 }
@@ -347,15 +350,19 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
             );
         }
         catch (Exception e) {
-            --maxErrors;
-            log.error("Processing RSS for {}: {}. {} attempts remain", url, e.getMessage(), maxErrors);
-            if (0 == maxErrors) {
-                log.warn("Stopping RSS feed for {}.", url);
-                stopSelf();
-            }
+            handleError(e);
         }
         finally {
             response.close();
+        }
+    }
+
+    protected void handleError(Exception e) {
+        --maxErrors;
+        log.error("Processing RSS for {}: {}. {} attempts remain", url, e.getMessage(), maxErrors);
+        if (0 == maxErrors) {
+            log.warn("Stopping RSS feed for {}.", url);
+            stopSelf();
         }
     }
 
