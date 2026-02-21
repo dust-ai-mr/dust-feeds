@@ -39,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.Response;
 import java.io.ByteArrayInputStream;
 import java.io.Serializable;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -181,7 +182,14 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
 
     @Override
     protected void preStart() {
-        saveSnapshot(rssFeedstate);
+        try {
+            new URI(url);
+            saveSnapshot(rssFeedstate);
+        }
+        catch (Exception e) {
+          log.error("Could not start RSS feed pipe for %s: %s -- stopping".formatted(url, e.getMessage()));
+          stopSelf();
+        }
     }
 
     /**
@@ -343,8 +351,10 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
         String body;
 
         try {
+            SyndFeedInput sfi = new SyndFeedInput();
+            sfi.setAllowDoctypes(true);
             body = response.body().string();
-            processRss(new SyndFeedInput().build(
+            processRss(sfi.build(
                 new XmlReader(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)))),
                 body
             );
@@ -361,7 +371,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
         --maxErrors;
         log.error("Processing RSS for {}: {}. {} attempts remain", url, e.getMessage(), maxErrors);
         if (0 == maxErrors) {
-            log.warn("Stopping RSS feed for {}.", url);
+            log.warn("Max errors exceeded. Stopping RSS feed for {}.", url);
             stopSelf();
         }
     }
