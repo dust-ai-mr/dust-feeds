@@ -200,10 +200,11 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
     @Override
     protected void postStop() {
         if (isInShutdown()) {
-            vStart(() -> saveSnapshot(rssFeedstate));
+            saveSnapshot(rssFeedstate);
         }
         else
-            vStart(this::deleteSnapshot);
+            deleteSnapshot();
+
         if (null != pump)
             pump.cancel();
     }
