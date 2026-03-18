@@ -17,10 +17,11 @@
 
 
 import com.mentalresonance.dust.core.actors.ActorSystem
+import com.mentalresonance.dust.core.actors.ActorSystemBuilder
 import com.mentalresonance.dust.core.actors.Props
 import com.mentalresonance.dust.core.actors.lib.LogActor
 import com.mentalresonance.dust.core.actors.lib.PipelineActor
-import com.mentalresonance.dust.core.services.FSTPersistenceService
+import com.mentalresonance.dust.core.services.GsonPersistenceService
 import com.mentalresonance.dust.feeds.crawler.PageCrawlMsg
 import com.mentalresonance.dust.feeds.crawler.SiteCrawlerPipeActor
 import groovy.util.logging.Slf4j
@@ -29,6 +30,7 @@ import spock.lang.Specification
 @Slf4j
 class WebCrawlerPipelineTest extends Specification {
 
+	static success = false
 	/**
 	 * Crawl the given website looking for links to pages on the site and following them. Again
 	 * a simple two-stage pipe with a Logger at the end.
@@ -36,8 +38,8 @@ class WebCrawlerPipelineTest extends Specification {
 	def "SiteCrawlPipeline"() {
 
 		when:
-			ActorSystem system = new ActorSystem("Test")
-			system.setPersistenceService(FSTPersistenceService.create())
+		ActorSystem system = new ActorSystemBuilder().name("WebCrawlerTest").build()
+			system.setPersistenceService(GsonPersistenceService.create())
 			/**
 			 * Just pattern match on hrefs for now - anything
 			 */

@@ -18,11 +18,12 @@
 
 import com.mentalresonance.dust.core.actors.ActorRef
 import com.mentalresonance.dust.core.actors.ActorSystem
+import com.mentalresonance.dust.core.actors.ActorSystemBuilder
 import com.mentalresonance.dust.core.actors.Props
 import com.mentalresonance.dust.core.actors.lib.LogActor
 import com.mentalresonance.dust.core.actors.lib.PipelineActor
 import com.mentalresonance.dust.core.msgs.StartMsg
-import com.mentalresonance.dust.core.services.FSTPersistenceService
+import com.mentalresonance.dust.core.services.GsonPersistenceService
 import com.mentalresonance.dust.feeds.rss.RssFeedPipeActor
 import groovy.util.logging.Slf4j
 import spock.lang.Specification
@@ -38,8 +39,8 @@ class RssPipelineTest extends Specification {
 	def "RssPipelineWithContent"() {
 
 		when:
-			ActorSystem system = new ActorSystem("RssPipelineTest")
-			system.setPersistenceService(FSTPersistenceService.create())
+			ActorSystem system = new ActorSystemBuilder().name("RssPipelineTest").build()
+			system.setPersistenceService(GsonPersistenceService.create())
 
 			Props rssProps = RssFeedPipeActor.props("https://fortune.com/feed", 100000),
 				  logProps = LogActor.props();

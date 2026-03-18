@@ -73,7 +73,7 @@ public class ImapActor extends Actor {
 	public ActorBehavior createBehavior() {
 		return (Serializable message) -> {
             if (Objects.requireNonNull(message) instanceof StartMsg) {
-                clientRef = (ActorRef)((StartMsg)message).getMsg();
+                clientRef = (ActorRef)((StartMsg)message).msg();
                 scheduleIn(message, scheduleIn);
                 getMail();
             } else {

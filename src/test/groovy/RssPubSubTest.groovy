@@ -20,9 +20,10 @@ import com.mentalresonance.dust.core.actors.Actor
 import com.mentalresonance.dust.core.actors.ActorBehavior
 import com.mentalresonance.dust.core.actors.ActorRef
 import com.mentalresonance.dust.core.actors.ActorSystem
+import com.mentalresonance.dust.core.actors.ActorSystemBuilder
 import com.mentalresonance.dust.core.actors.Props
 import com.mentalresonance.dust.core.msgs.PubSubMsg
-import com.mentalresonance.dust.core.services.FSTPersistenceService
+import com.mentalresonance.dust.core.services.GsonPersistenceService
 import com.mentalresonance.dust.feeds.rss.RssPubSubActor
 import com.mentalresonance.dust.html.msgs.HtmlDocumentMsg
 import groovy.util.logging.Slf4j
@@ -61,8 +62,8 @@ class RssPubSubTest extends Specification {
 	def "RssPubSubWithContent"() {
 
 		when:
-			ActorSystem system = new ActorSystem("RssPubSubTest")
-			system.setPersistenceService(FSTPersistenceService.create())
+		ActorSystem system = new ActorSystemBuilder().name("RssPubSubText").build()
+			system.setPersistenceService(GsonPersistenceService.create())
 
 			ActorRef pubSubRef = system.context.actorOf(
 				RssPubSubActor.props("https://fortune.com/feed", 100000),

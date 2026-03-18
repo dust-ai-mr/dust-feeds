@@ -18,6 +18,7 @@
 
 import com.mentalresonance.dust.core.actors.ActorRef
 import com.mentalresonance.dust.core.actors.ActorSystem
+import com.mentalresonance.dust.core.actors.ActorSystemBuilder
 import com.mentalresonance.dust.core.actors.lib.LogActor
 import com.mentalresonance.dust.core.actors.lib.ServiceManagerActor
 import com.mentalresonance.dust.feeds.searxng.actors.SearxNGServiceActor
@@ -40,7 +41,7 @@ class SearXNGServiceTest extends Specification {
 	def "SearXNGService"() {
 
 		when:
-			ActorSystem system = new ActorSystem("Test")
+		ActorSystem system = new ActorSystemBuilder().name("SearXNGServiceTest").build()
 
 			ActorRef service = system.context.actorOf(
 				ServiceManagerActor.props(

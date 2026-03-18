@@ -213,7 +213,7 @@ public class RssFeedPipeActor extends PersistentActor implements HttpClientActor
     protected ActorBehavior recoveryBehavior() {
         return message -> {
             if (Objects.requireNonNull(message) instanceof SnapshotMsg msg) {
-                rssFeedstate = null != msg.getSnapshot() ? (RssFeedstate) msg.getSnapshot() : new RssFeedstate();
+                rssFeedstate = null != msg.snapshot() ? (RssFeedstate) msg.snapshot() : new RssFeedstate();
                 become(createBehavior());
             }
             else {
